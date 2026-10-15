@@ -22,7 +22,7 @@ main{padding:22px 16px 42px}.notice{border-left:4px solid #e6a23c;background:#ff
 <label for="paragraph">अनुच्छेद संपादित करें</label>
 <textarea id="paragraph">सुबह की हल्की धूप खिड़की से कमरे में आ रही थी। बाहर बच्चे मैदान में खेल रहे थे और पास की सड़क पर गाड़ियों की आवाज़ सुनाई दे रही थी। शिक्षक ने विद्यार्थियों से कहा कि ध्यान से सुनना और सही शब्दों को समझना सीखने का महत्वपूर्ण हिस्सा है।</textarea>
 <div class="row" style="margin-top:10px"><button class="btn" id="speak">सामान्य आवाज़ में पढ़ें</button><button class="btn secondary" id="stopSpeech">आवाज़ रोकें</button><button class="btn secondary" id="refreshText">दृश्य उदाहरण अपडेट करें</button></div>
-<p class="muted">ब्राउज़र में हिंदी टेक्स्ट-टू-स्पीच उपलब्ध होने पर ही “सामान्य आवाज़ में पढ़ें” काम करेगा। यह TTS आवाज़ श्रवण-हानि फ़िल्टर से नहीं गुजरती।</p>
+<p class="muted">यह बटन चुनी गई प्रोफ़ाइल के अनुसार आवाज़ का वॉल्यूम बदलता है। अधिक वास्तविक फ़्रीक्वेंसी फ़िल्टरिंग के लिए नीचे रिकॉर्डिंग करें या ऑडियो फ़ाइल चुनें और “चुनी प्रोफ़ाइल में चलाएँ” दबाएँ।</p>
 </div>
 <div class="card"><h2>2. अपनी रिकॉर्डिंग या ऑडियो फ़ाइल</h2>
 <p class="muted">अनुच्छेद को अपनी आवाज़ में रिकॉर्ड करें या पहले से बनी हिंदी स्पीच फ़ाइल चुनें। फिर उसी रिकॉर्डिंग को अलग-अलग प्रोफ़ाइल में सुनें।</p>
@@ -62,14 +62,16 @@ main{padding:22px 16px 42px}.notice{border-left:4px solid #e6a23c;background:#ff
 const $=id=>document.getElementById(id);
 let level=0, recorder=null, chunks=[], stream=null, audioCtx=null, sourceNode=null, filters=[], gainNode=null, noiseNode=null, noiseGain=null, currentObjectUrl=null, revealed=false;
 const levelNames=['0 — सामान्य','1 — हल्की हानि','2 — मध्यम हानि','3 — गंभीर हानि'];
-function updateLevel(n){level=Number(n);updateAudioFilters();$('severity').value=level;$('severityLabel').textContent=levelNames[level];$('severityBar').style.width=(level/3*100)+'%';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));$('playProcessed').textContent=level===0?'सामान्य श्रवण में चलाएँ':'चुनी प्रोफ़ाइल में चलाएँ';renderText();}
+function updateLevel(n){level=Number(n);updateAudioFilters();$('severity').value=level;$('severityLabel').textContent=levelNames[level];$('severityBar').style.width=(level/3*100)+'%';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));$('playProcessed').textContent=level===0?'सामान्य श्रवण में चलाएँ':'चुनी प्रोफ़ाइल में चलाएँ';renderText();if(activeTtsText&&'speechSynthesis'in window&&speechSynthesis.speaking)speakText(activeTtsText);}
 document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>updateLevel(b.dataset.level)));
 $('severity').addEventListener('input',e=>updateLevel(e.target.value));
 $('noise').addEventListener('input',e=>{$('noiseLabel').textContent=e.target.value==0?'कम':e.target.value<13?'हल्का':e.target.value<25?'मध्यम':'अधिक';updateNoise();});
 function words(){return $('paragraph').value.trim().split(/\s+/).filter(Boolean)}
 function renderText(){const ws=words();const fraction=[0,.12,.28,.48][level];let hidden=0;$('reading').innerHTML='';ws.forEach((w,i)=>{const span=document.createElement('span');span.className='word';const hide=!revealed && w.length>2 && ((i*37+ws.length*11)%100)<fraction*100;if(hide){span.textContent='████';span.classList.add('masked');span.setAttribute('aria-label','छिपा हुआ शब्द');hidden++;}else span.textContent=w;$('reading').appendChild(span);$('reading').appendChild(document.createTextNode(' '));});$('visualNote').textContent=hidden?hidden+' में से '+ws.length+' शब्द दृश्य उदाहरण में छिपे हैं।':'दृश्य प्रभाव: कोई शब्द छिपा नहीं है।';}
 $('refreshText').addEventListener('click',()=>{revealed=false;renderText()});$('maskAgain').addEventListener('click',()=>{revealed=false;renderText()});$('reveal').addEventListener('click',()=>{revealed=true;renderText()});$('paragraph').addEventListener('input',()=>{revealed=false;renderText()});
-$('speak').addEventListener('click',()=>{if(!('speechSynthesis'in window)){alert('इस ब्राउज़र में टेक्स्ट-टू-स्पीच उपलब्ध नहीं है।');return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance($('paragraph').value);u.lang='hi-IN';u.rate=.88;const voices=speechSynthesis.getVoices();const hi=voices.find(v=>v.lang.toLowerCase().startsWith('hi'));if(hi)u.voice=hi;speechSynthesis.speak(u);});
+let activeTtsText='';
+function speakText(text=$('paragraph').value){if(!('speechSynthesis'in window)){alert('इस ब्राउज़र में टेक्स्ट-टू-सpeech उपलब्ध नहीं है।');return;}activeTtsText=text;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='hi-IN';u.rate=[.88,.86,.82,.78][level];u.volume=[1,.5,.22,.08][level];const voices=speechSynthesis.getVoices();const hi=voices.find(v=>v.lang.toLowerCase().startsWith('hi'));if(hi)u.voice=hi;speechSynthesis.speak(u);}
+$('speak').addEventListener('click',()=>speakText());
 $('stopSpeech').addEventListener('click',()=>speechSynthesis.cancel());
 function setAudioStatus(t){$('audioStatus').textContent=t}
 function setFile(blob,name){$('sourceAudio').pause();stopNoise();if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=URL.createObjectURL(blob);$('sourceAudio').src=currentObjectUrl;$('sourceAudio').load();$('playProcessed').disabled=false;setAudioStatus(name+' तैयार है। अब प्रोफ़ाइल चुनकर चलाएँ।');}
