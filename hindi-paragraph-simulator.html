@@ -62,25 +62,64 @@ main{padding:22px 16px 42px}.notice{border-left:4px solid #e6a23c;background:#ff
 const $=id=>document.getElementById(id);
 let level=0, recorder=null, chunks=[], stream=null, audioCtx=null, sourceNode=null, filters=[], gainNode=null, noiseNode=null, noiseGain=null, currentObjectUrl=null, revealed=false;
 const levelNames=['0 — सामान्य','1 — हल्की हानि','2 — मध्यम हानि','3 — गंभीर हानि'];
-function updateLevel(n){level=Number(n);$('severity').value=level;$('severityLabel').textContent=levelNames[level];$('severityBar').style.width=(level/3*100)+'%';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));$('playProcessed').textContent=level===0?'सामान्य श्रवण में चलाएँ':'चुनी प्रोफ़ाइल में चलाएँ';renderText();}
+function updateLevel(n){level=Number(n);updateAudioFilters();$('severity').value=level;$('severityLabel').textContent=levelNames[level];$('severityBar').style.width=(level/3*100)+'%';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));$('playProcessed').textContent=level===0?'सामान्य श्रवण में चलाएँ':'चुनी प्रोफ़ाइल में चलाएँ';renderText();}
 document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>updateLevel(b.dataset.level)));
 $('severity').addEventListener('input',e=>updateLevel(e.target.value));
-$('noise').addEventListener('input',e=>{$('noiseLabel').textContent=e.target.value==0?'कम':e.target.value<13?'हल्का':e.target.value<25?'मध्यम':'अधिक';});
+$('noise').addEventListener('input',e=>{$('noiseLabel').textContent=e.target.value==0?'कम':e.target.value<13?'हल्का':e.target.value<25?'मध्यम':'अधिक';updateNoise();});
 function words(){return $('paragraph').value.trim().split(/\s+/).filter(Boolean)}
 function renderText(){const ws=words();const fraction=[0,.12,.28,.48][level];let hidden=0;$('reading').innerHTML='';ws.forEach((w,i)=>{const span=document.createElement('span');span.className='word';const hide=!revealed && w.length>2 && ((i*37+ws.length*11)%100)<fraction*100;if(hide){span.textContent='████';span.classList.add('masked');span.setAttribute('aria-label','छिपा हुआ शब्द');hidden++;}else span.textContent=w;$('reading').appendChild(span);$('reading').appendChild(document.createTextNode(' '));});$('visualNote').textContent=hidden?hidden+' में से '+ws.length+' शब्द दृश्य उदाहरण में छिपे हैं।':'दृश्य प्रभाव: कोई शब्द छिपा नहीं है।';}
 $('refreshText').addEventListener('click',()=>{revealed=false;renderText()});$('maskAgain').addEventListener('click',()=>{revealed=false;renderText()});$('reveal').addEventListener('click',()=>{revealed=true;renderText()});$('paragraph').addEventListener('input',()=>{revealed=false;renderText()});
 $('speak').addEventListener('click',()=>{if(!('speechSynthesis'in window)){alert('इस ब्राउज़र में टेक्स्ट-टू-स्पीच उपलब्ध नहीं है।');return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance($('paragraph').value);u.lang='hi-IN';u.rate=.88;const voices=speechSynthesis.getVoices();const hi=voices.find(v=>v.lang.toLowerCase().startsWith('hi'));if(hi)u.voice=hi;speechSynthesis.speak(u);});
 $('stopSpeech').addEventListener('click',()=>speechSynthesis.cancel());
 function setAudioStatus(t){$('audioStatus').textContent=t}
-function setFile(blob,name){if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=URL.createObjectURL(blob);$('sourceAudio').src=currentObjectUrl;$('sourceAudio').load();$('playProcessed').disabled=false;setAudioStatus(name+' तैयार है। अब प्रोफ़ाइल चुनकर चलाएँ।');}
+function setFile(blob,name){$('sourceAudio').pause();stopNoise();if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=URL.createObjectURL(blob);$('sourceAudio').src=currentObjectUrl;$('sourceAudio').load();$('playProcessed').disabled=false;setAudioStatus(name+' तैयार है। अब प्रोफ़ाइल चुनकर चलाएँ।');}
 $('audioFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)setFile(f,f.name)});
 $('record').addEventListener('click',async()=>{try{stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});setFile(blob,'रिकॉर्डिंग');stream.getTracks().forEach(t=>t.stop());stream=null;$('record').disabled=false;$('stopRecord').disabled=true;};recorder.start();$('record').disabled=true;$('stopRecord').disabled=false;setAudioStatus('रिकॉर्डिंग जारी है… अनुच्छेद पढ़ें, फिर रोकें।');}catch(e){setAudioStatus('माइक्रोफ़ोन नहीं खुल सका। अनुमति दें या ऑडियो फ़ाइल चुनें।');}});
 $('stopRecord').addEventListener('click',()=>{if(recorder&&recorder.state!=='inactive')recorder.stop()});
 function makeNoise(ctx){const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;const n=ctx.createBufferSource();n.buffer=buffer;n.loop=true;return n;}
-async function playProcessed(){const el=$('sourceAudio');if(!el.src){setAudioStatus('पहले रिकॉर्डिंग करें या ऑडियो फ़ाइल चुनें।');return;}try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();el.pause();el.currentTime=0;if(sourceNode){try{sourceNode.disconnect()}catch(e){}}filters.forEach(f=>{try{f.disconnect()}catch(e){}});if(gainNode){try{gainNode.disconnect()}catch(e){}}if(noiseNode){try{noiseNode.stop()}catch(e){}try{noiseNode.disconnect();noiseGain.disconnect()}catch(e){}}sourceNode=audioCtx.createMediaElementSource(el);gainNode=audioCtx.createGain();gainNode.gain.value=[1,.92,.82,.7][level];let previous=sourceNode;const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.frequency.value=[20,120,250,450][level];hp.Q.value=.7;previous.connect(hp);previous=hp;const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=[18000,7500,4200,2600][level];lp.Q.value=.7;previous.connect(lp);previous=lp;const peaking=audioCtx.createBiquadFilter();peaking.type='peaking';peaking.frequency.value=3000;peaking.Q.value=1;peaking.gain.value=[0,-3,-7,-11][level];previous.connect(peaking);previous=peaking;filters=[hp,lp,peaking];previous.connect(gainNode);gainNode.connect(audioCtx.destination);const noiseLevel=Number($('noise').value);if(noiseLevel>0){noiseNode=makeNoise(audioCtx);noiseGain=audioCtx.createGain();noiseGain.gain.value=noiseLevel/100;noiseNode.connect(noiseGain);noiseGain.connect(audioCtx.destination);noiseNode.start();}el.play();setAudioStatus('चल रहा है: '+levelNames[level]+'. यह एक सरल फ़िल्टर-आधारित अनुमान है, क्लिनिकल मॉडल नहीं।');}catch(e){setAudioStatus('ऑडियो चलाने में समस्या हुई। फ़ाइल का फ़ॉर्मैट जाँचें और फिर प्रयास करें।');}}
+function stopNoise(){if(noiseNode){try{noiseNode.stop()}catch(e){}try{noiseNode.disconnect()}catch(e){}noiseNode=null;}if(noiseGain){try{noiseGain.disconnect()}catch(e){}noiseGain=null;}}
+function updateAudioFilters(){
+ if(!audioCtx||!filters.length||!gainNode)return;
+ const now=audioCtx.currentTime;
+ filters[0].frequency.setTargetAtTime([20,120,250,450][level],now,.02);
+ filters[1].frequency.setTargetAtTime([18000,7500,4200,2600][level],now,.02);
+ filters[2].gain.setTargetAtTime([0,-3,-7,-11][level],now,.02);
+ gainNode.gain.setTargetAtTime([1,.92,.82,.7][level],now,.02);
+}
+function updateNoise(){
+ if(!audioCtx)return;
+ const value=Number($('noise').value);
+ if(value===0){stopNoise();return;}
+ if(!noiseNode){noiseNode=makeNoise(audioCtx);noiseGain=audioCtx.createGain();noiseNode.connect(noiseGain);noiseGain.connect(audioCtx.destination);noiseNode.start();}
+ noiseGain.gain.setTargetAtTime(value/100,audioCtx.currentTime,.02);
+}
+async function playProcessed(){
+ const el=$('sourceAudio');
+ if(!el.src){setAudioStatus('पहले रिकॉर्डिंग करें या ऑडियो फ़ाइल चुनें।');return;}
+ try{
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  await audioCtx.resume();
+  // An HTMLMediaElement may only be associated with one MediaElementAudioSourceNode.
+  // Reuse the same node and audio graph for every replay and every recording.
+  if(!sourceNode){
+   sourceNode=audioCtx.createMediaElementSource(el);
+   const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.Q.value=.7;
+   const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.Q.value=.7;
+   const peak=audioCtx.createBiquadFilter();peak.type='peaking';peak.frequency.value=3000;peak.Q.value=1;
+   gainNode=audioCtx.createGain();
+   sourceNode.connect(hp);hp.connect(lp);lp.connect(peak);peak.connect(gainNode);gainNode.connect(audioCtx.destination);
+   filters=[hp,lp,peak];
+  }
+  updateAudioFilters();
+  el.pause();el.currentTime=0;
+  updateNoise();
+  await el.play();
+  setAudioStatus('चल रहा है: '+levelNames[level]+'. रिकॉर्डिंग को बिना दोबारा रिकॉर्ड किए पुनः चला सकते हैं।');
+ }catch(e){stopNoise();console.error('Audio playback error:',e);setAudioStatus('प्लेबैक विफल: '+(e&&e.message?e.message:'ब्राउज़र ऑडियो समस्या')+'। पेज रीफ़्रेश करके पुनः प्रयास करें।');}
+}
 $('playProcessed').addEventListener('click',playProcessed);
-$('stopAudio').addEventListener('click',()=>{ $('sourceAudio').pause();if(noiseNode){try{noiseNode.stop()}catch(e){}noiseNode=null;}setAudioStatus('प्लेबैक रोक दिया गया।');});
-$('sourceAudio').addEventListener('ended',()=>{if(noiseNode){try{noiseNode.stop()}catch(e){}noiseNode=null;}});
+$('stopAudio').addEventListener('click',()=>{ $('sourceAudio').pause();stopNoise();setAudioStatus('प्लेबैक रोक दिया गया। फिर से चलाने के लिए प्ले दबाएँ।');});
+$('sourceAudio').addEventListener('ended',()=>{stopNoise();setAudioStatus('प्लेबैक पूरा हुआ। वही रिकॉर्डिंग फिर से चला सकते हैं या प्रोफ़ाइल बदल सकते हैं।');});
 updateLevel(0);
 </script>
 </body></html>
