@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>हिंदी श्रवण-हानि अनुभव सिम्युलेटर</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#17253c;--muted:#627089;--line:#dce4ef;--blue:#2257d6;--soft:#eaf0ff;--green:#16805d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Devanagari",sans-serif;line-height:1.55}
+header{background:linear-gradient(120deg,#142b53,#2858bb);color:white;padding:30px 18px}header .wrap,main{max-width:1050px;margin:auto}h1{font-size:clamp(1.5rem,4vw,2.3rem);line-height:1.2;margin:0 0 10px}header p{margin:0;max-width:780px;color:#e3ebff}
+main{padding:22px 16px 42px}.notice{border-left:4px solid #e6a23c;background:#fff7e7;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:.93rem}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 5px 18px #1b37600a;margin-bottom:16px}h2{font-size:1.15rem;margin:0 0 14px}label{font-weight:650;display:block;margin:12px 0 6px}textarea,select,input[type=file]{width:100%;border:1px solid #cbd5e3;border-radius:10px;padding:11px;background:white;color:var(--ink);font:inherit}textarea{min-height:145px;resize:vertical}.muted{color:var(--muted);font-size:.9rem}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--blue);color:white;font:inherit;font-weight:650;cursor:pointer}.btn.secondary{background:var(--soft);color:#2147a2}.btn.dark{background:#27364e}.btn:disabled{opacity:.45;cursor:not-allowed}.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.preset{border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px;text-align:left;cursor:pointer;color:var(--ink)}.preset strong{display:block}.preset small{color:var(--muted)}.preset.active{border:2px solid var(--blue);background:#f1f5ff;padding:11px}.range-row{display:flex;justify-content:space-between;gap:10px;font-size:.95rem}input[type=range]{width:100%;accent-color:var(--blue)}.reading{font-size:1.12rem;line-height:2.15;background:#f8faff;border:1px solid var(--line);padding:14px;border-radius:12px;min-height:120px}.word{display:inline-block;margin-right:.22em}.masked{background:#27364e;color:#27364e;border-radius:4px;user-select:none}.status{font-weight:650;color:var(--green);min-height:1.4em}.bar{height:8px;background:#e7edf6;border-radius:9px;overflow:hidden;margin:8px 0}.bar span{display:block;height:100%;width:0;background:var(--blue);transition:width .2s}.footer{font-size:.85rem;color:var(--muted);padding:4px 2px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.card{padding:16px}.presets{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>हिंदी श्रवण-हानि अनुभव सिम्युलेटर</h1><p>एक ही हिंदी अनुच्छेद को सामान्य श्रवण और अलग-अलग श्रवण-हानि प्रोफ़ाइल के साथ तुलना करें। ऑडियो फ़िल्टरिंग और शब्द-पहचान का दृश्य उदाहरण एक ही स्क्रीन पर उपलब्ध है।</p></div></header>
+<main>
+<div class="notice"><strong>महत्वपूर्ण:</strong> यह केवल शैक्षिक प्रदर्शन है। वास्तविक श्रवण-हानि हर व्यक्ति में अलग होती है; यह सिम्युलेशन नैदानिक परीक्षण, ऑडियोग्राम या किसी व्यक्ति के वास्तविक अनुभव का सटीक विकल्प नहीं है। सुरक्षित वॉल्यूम रखें।</div>
+<div class="grid">
+<section>
+<div class="card"><h2>1. हिंदी अनुच्छेद</h2>
+<label for="paragraph">अनुच्छेद संपादित करें</label>
+<textarea id="paragraph">सुबह की हल्की धूप खिड़की से कमरे में आ रही थी। बाहर बच्चे मैदान में खेल रहे थे और पास की सड़क पर गाड़ियों की आवाज़ सुनाई दे रही थी। शिक्षक ने विद्यार्थियों से कहा कि ध्यान से सुनना और सही शब्दों को समझना सीखने का महत्वपूर्ण हिस्सा है।</textarea>
+<div class="row" style="margin-top:10px"><button class="btn" id="speak">सामान्य आवाज़ में पढ़ें</button><button class="btn secondary" id="stopSpeech">आवाज़ रोकें</button><button class="btn secondary" id="refreshText">दृश्य उदाहरण अपडेट करें</button></div>
+<p class="muted">ब्राउज़र में हिंदी टेक्स्ट-टू-स्पीच उपलब्ध होने पर ही “सामान्य आवाज़ में पढ़ें” काम करेगा। यह TTS आवाज़ श्रवण-हानि फ़िल्टर से नहीं गुजरती।</p>
+</div>
+<div class="card"><h2>2. अपनी रिकॉर्डिंग या ऑडियो फ़ाइल</h2>
+<p class="muted">अनुच्छेद को अपनी आवाज़ में रिकॉर्ड करें या पहले से बनी हिंदी स्पीच फ़ाइल चुनें। फिर उसी रिकॉर्डिंग को अलग-अलग प्रोफ़ाइल में सुनें।</p>
+<div class="row"><button class="btn" id="record">● रिकॉर्डिंग शुरू करें</button><button class="btn secondary" id="stopRecord" disabled>रिकॉर्डिंग रोकें</button></div>
+<label for="audioFile">ऑडियो फ़ाइल चुनें</label><input id="audioFile" type="file" accept="audio/*">
+<audio id="sourceAudio" controls style="width:100%;margin-top:12px"></audio>
+<div class="row" style="margin-top:10px"><button class="btn" id="playProcessed" disabled>चुनी प्रोफ़ाइल में चलाएँ</button><button class="btn secondary" id="stopAudio">प्लेबैक रोकें</button></div>
+<p id="audioStatus" class="status" aria-live="polite">रिकॉर्डिंग या ऑडियो फ़ाइल जोड़ें।</p>
+</div>
+</section>
+<section>
+<div class="card"><h2>3. श्रवण प्रोफ़ाइल चुनें</h2>
+<div class="presets" id="presets">
+<button class="preset active" data-level="0"><strong>सामान्य श्रवण</strong><small>तुलना के लिए आधार</small></button>
+<button class="preset" data-level="1"><strong>हल्की हानि</strong><small>उच्च आवृत्तियों में हल्की कमी</small></button>
+<button class="preset" data-level="2"><strong>मध्यम हानि</strong><small>स्पष्टता और कुछ ध्वनियों में कमी</small></button>
+<button class="preset" data-level="3"><strong>गंभीर हानि</strong><small>अधिक फ़िल्टरिंग और अस्पष्टता</small></button>
+</div>
+<label for="severity">हानि की तीव्रता: <span id="severityLabel">0 — सामान्य</span></label>
+<input id="severity" type="range" min="0" max="3" step="1" value="0">
+<div class="bar"><span id="severityBar"></span></div>
+<label for="noise">पृष्ठभूमि शोर: <span id="noiseLabel">कम</span></label>
+<input id="noise" type="range" min="0" max="35" step="1" value="0">
+<p class="muted">प्रोफ़ाइल ध्वनि को फ़िल्टर और सीमित करती है। चुनी गई श्रेणी किसी निश्चित dB HL ऑडियोग्राम का प्रतिनिधित्व नहीं करती।</p>
+</div>
+<div class="card"><h2>4. अनुच्छेद की संभावित शब्द-पहचान</h2>
+<p class="muted">नीचे कुछ शब्द छिपाकर दिखाए गए हैं ताकि समझने में संभावित कठिनाई का दृश्य उदाहरण मिले। यह किसी वास्तविक व्यक्ति की समझ या स्कोर का माप नहीं है।</p>
+<div id="reading" class="reading" lang="hi" aria-live="polite"></div>
+<div class="row" style="margin-top:12px"><button class="btn secondary" id="reveal">सभी शब्द दिखाएँ</button><button class="btn secondary" id="maskAgain">दृश्य उदाहरण फिर बनाएँ</button></div>
+<p class="muted" id="visualNote">दृश्य प्रभाव: कोई शब्द छिपा नहीं है।</p>
+</div>
+<div class="card"><h2>5. तुलना कैसे करें</h2><ol><li>अनुच्छेद को अपनी आवाज़ में रिकॉर्ड करें या ऑडियो फ़ाइल चुनें।</li><li>पहले “सामान्य श्रवण” में सुनें।</li><li>फिर हल्की, मध्यम और गंभीर प्रोफ़ाइल चुनकर उसी ऑडियो को दोबारा सुनें।</li><li>शोर बढ़ाकर देखें कि पृष्ठभूमि शोर में भाषण समझना कैसे कठिन हो सकता है।</li></ol></div>
+</section></div>
+<div class="footer">यह ब्राउज़र-आधारित शैक्षिक सिम्युलेटर है। ऑडियो आपके ब्राउज़र में ही प्रोसेस होता है; इस पेज में ऑडियो अपलोड करने के लिए कोई सर्वर कनेक्शन नहीं है।</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let level=0, recorder=null, chunks=[], stream=null, audioCtx=null, sourceNode=null, filters=[], gainNode=null, noiseNode=null, noiseGain=null, currentObjectUrl=null, revealed=false;
+const levelNames=['0 — सामान्य','1 — हल्की हानि','2 — मध्यम हानि','3 — गंभीर हानि'];
+function updateLevel(n){level=Number(n);$('severity').value=level;$('severityLabel').textContent=levelNames[level];$('severityBar').style.width=(level/3*100)+'%';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));$('playProcessed').textContent=level===0?'सामान्य श्रवण में चलाएँ':'चुनी प्रोफ़ाइल में चलाएँ';renderText();}
+document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>updateLevel(b.dataset.level)));
+$('severity').addEventListener('input',e=>updateLevel(e.target.value));
+$('noise').addEventListener('input',e=>{$('noiseLabel').textContent=e.target.value==0?'कम':e.target.value<13?'हल्का':e.target.value<25?'मध्यम':'अधिक';});
+function words(){return $('paragraph').value.trim().split(/\s+/).filter(Boolean)}
+function renderText(){const ws=words();const fraction=[0,.12,.28,.48][level];let hidden=0;$('reading').innerHTML='';ws.forEach((w,i)=>{const span=document.createElement('span');span.className='word';const hide=!revealed && w.length>2 && ((i*37+ws.length*11)%100)<fraction*100;if(hide){span.textContent='████';span.classList.add('masked');span.setAttribute('aria-label','छिपा हुआ शब्द');hidden++;}else span.textContent=w;$('reading').appendChild(span);$('reading').appendChild(document.createTextNode(' '));});$('visualNote').textContent=hidden?hidden+' में से '+ws.length+' शब्द दृश्य उदाहरण में छिपे हैं।':'दृश्य प्रभाव: कोई शब्द छिपा नहीं है।';}
+$('refreshText').addEventListener('click',()=>{revealed=false;renderText()});$('maskAgain').addEventListener('click',()=>{revealed=false;renderText()});$('reveal').addEventListener('click',()=>{revealed=true;renderText()});$('paragraph').addEventListener('input',()=>{revealed=false;renderText()});
+$('speak').addEventListener('click',()=>{if(!('speechSynthesis'in window)){alert('इस ब्राउज़र में टेक्स्ट-टू-स्पीच उपलब्ध नहीं है।');return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance($('paragraph').value);u.lang='hi-IN';u.rate=.88;const voices=speechSynthesis.getVoices();const hi=voices.find(v=>v.lang.toLowerCase().startsWith('hi'));if(hi)u.voice=hi;speechSynthesis.speak(u);});
+$('stopSpeech').addEventListener('click',()=>speechSynthesis.cancel());
+function setAudioStatus(t){$('audioStatus').textContent=t}
+function setFile(blob,name){if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=URL.createObjectURL(blob);$('sourceAudio').src=currentObjectUrl;$('sourceAudio').load();$('playProcessed').disabled=false;setAudioStatus(name+' तैयार है। अब प्रोफ़ाइल चुनकर चलाएँ।');}
+$('audioFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)setFile(f,f.name)});
+$('record').addEventListener('click',async()=>{try{stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});setFile(blob,'रिकॉर्डिंग');stream.getTracks().forEach(t=>t.stop());stream=null;$('record').disabled=false;$('stopRecord').disabled=true;};recorder.start();$('record').disabled=true;$('stopRecord').disabled=false;setAudioStatus('रिकॉर्डिंग जारी है… अनुच्छेद पढ़ें, फिर रोकें।');}catch(e){setAudioStatus('माइक्रोफ़ोन नहीं खुल सका। अनुमति दें या ऑडियो फ़ाइल चुनें।');}});
+$('stopRecord').addEventListener('click',()=>{if(recorder&&recorder.state!=='inactive')recorder.stop()});
+function makeNoise(ctx){const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;const n=ctx.createBufferSource();n.buffer=buffer;n.loop=true;return n;}
+async function playProcessed(){const el=$('sourceAudio');if(!el.src){setAudioStatus('पहले रिकॉर्डिंग करें या ऑडियो फ़ाइल चुनें।');return;}try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();el.pause();el.currentTime=0;if(sourceNode){try{sourceNode.disconnect()}catch(e){}}filters.forEach(f=>{try{f.disconnect()}catch(e){}});if(gainNode){try{gainNode.disconnect()}catch(e){}}if(noiseNode){try{noiseNode.stop()}catch(e){}try{noiseNode.disconnect();noiseGain.disconnect()}catch(e){}}sourceNode=audioCtx.createMediaElementSource(el);gainNode=audioCtx.createGain();gainNode.gain.value=[1,.92,.82,.7][level];let previous=sourceNode;const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.frequency.value=[20,120,250,450][level];hp.Q.value=.7;previous.connect(hp);previous=hp;const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=[18000,7500,4200,2600][level];lp.Q.value=.7;previous.connect(lp);previous=lp;const peaking=audioCtx.createBiquadFilter();peaking.type='peaking';peaking.frequency.value=3000;peaking.Q.value=1;peaking.gain.value=[0,-3,-7,-11][level];previous.connect(peaking);previous=peaking;filters=[hp,lp,peaking];previous.connect(gainNode);gainNode.connect(audioCtx.destination);const noiseLevel=Number($('noise').value);if(noiseLevel>0){noiseNode=makeNoise(audioCtx);noiseGain=audioCtx.createGain();noiseGain.gain.value=noiseLevel/100;noiseNode.connect(noiseGain);noiseGain.connect(audioCtx.destination);noiseNode.start();}el.play();setAudioStatus('चल रहा है: '+levelNames[level]+'. यह एक सरल फ़िल्टर-आधारित अनुमान है, क्लिनिकल मॉडल नहीं।');}catch(e){setAudioStatus('ऑडियो चलाने में समस्या हुई। फ़ाइल का फ़ॉर्मैट जाँचें और फिर प्रयास करें।');}}
+$('playProcessed').addEventListener('click',playProcessed);
+$('stopAudio').addEventListener('click',()=>{ $('sourceAudio').pause();if(noiseNode){try{noiseNode.stop()}catch(e){}noiseNode=null;}setAudioStatus('प्लेबैक रोक दिया गया।');});
+$('sourceAudio').addEventListener('ended',()=>{if(noiseNode){try{noiseNode.stop()}catch(e){}noiseNode=null;}});
+updateLevel(0);
+</script>
+</body></html>
