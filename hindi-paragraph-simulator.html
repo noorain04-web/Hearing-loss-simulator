@@ -46,7 +46,7 @@ main{padding:22px 16px 42px}.notice{border-left:4px solid #e6a23c;background:#ff
 <div class="bar"><span id="severityBar"></span></div>
 <label for="noise">पृष्ठभूमि शोर: <span id="noiseLabel">कम</span></label>
 <input id="noise" type="range" min="0" max="35" step="1" value="0">
-<p class="muted">प्रोफ़ाइल ध्वनि को फ़िल्टर और सीमित करती है। चुनी गई श्रेणी किसी निश्चित dB HL ऑडियोग्राम का प्रतिनिधित्व नहीं करती।</p>
+<p class="muted">ऑडियो प्रोफ़ाइल अलग-अलग आवृत्तियों को अलग मात्रा में कम करती है, विशेषकर उच्च आवृत्तियों में; इससे व्यंजन-ध्वनियाँ कम स्पष्ट सुनाई दे सकती हैं। यह एक सामान्य उच्च-आवृत्ति-प्रधान हानि का शैक्षिक अनुमान है, किसी वास्तविक व्यक्ति का ऑडियोग्राम नहीं।</p>
 </div>
 <div class="card"><h2>4. अनुच्छेद की संभावित शब्द-पहचान</h2>
 <p class="muted">नीचे कुछ शब्द छिपाकर दिखाए गए हैं ताकि समझने में संभावित कठिनाई का दृश्य उदाहरण मिले। यह किसी वास्तविक व्यक्ति की समझ या स्कोर का माप नहीं है।</p>
@@ -54,13 +54,13 @@ main{padding:22px 16px 42px}.notice{border-left:4px solid #e6a23c;background:#ff
 <div class="row" style="margin-top:12px"><button class="btn secondary" id="reveal">सभी शब्द दिखाएँ</button><button class="btn secondary" id="maskAgain">दृश्य उदाहरण फिर बनाएँ</button></div>
 <p class="muted" id="visualNote">दृश्य प्रभाव: कोई शब्द छिपा नहीं है।</p>
 </div>
-<div class="card"><h2>5. तुलना कैसे करें</h2><ol><li>अनुच्छेद को अपनी आवाज़ में रिकॉर्ड करें या ऑडियो फ़ाइल चुनें।</li><li>पहले “सामान्य श्रवण” में सुनें।</li><li>फिर हल्की, मध्यम और गंभीर प्रोफ़ाइल चुनकर उसी ऑडियो को दोबारा सुनें।</li><li>शोर बढ़ाकर देखें कि पृष्ठभूमि शोर में भाषण समझना कैसे कठिन हो सकता है।</li></ol></div>
+<div class="card"><h2>5. तुलना कैसे करें</h2><ol><li>अनुच्छेद को अपनी आवाज़ में रिकॉर्ड करें या ऑडियो फ़ाइल चुनें।</li><li>रिकॉर्डिंग या ऑडियो फ़ाइल को “चुनी प्रोफ़ाइल में चलाएँ” से चलाएँ; यही आवृत्ति-आधारित फ़िल्टरिंग का मुख्य रास्ता है।</li><li>सामान्य, हल्की, मध्यम और गंभीर प्रोफ़ाइल पर उसी ऑडियो को बार-बार सुनें।</li><li>शोर बढ़ाकर देखें कि भाषण और शोर दोनों फ़िल्टर से गुजरते हैं और स्पष्टता बदलती है।</li></ol></div>
 </section></div>
 <div class="footer">यह ब्राउज़र-आधारित शैक्षिक सिम्युलेटर है। ऑडियो आपके ब्राउज़र में ही प्रोसेस होता है; इस पेज में ऑडियो अपलोड करने के लिए कोई सर्वर कनेक्शन नहीं है।</div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let level=0, recorder=null, chunks=[], stream=null, audioCtx=null, sourceNode=null, filters=[], gainNode=null, noiseNode=null, noiseGain=null, currentObjectUrl=null, revealed=false;
+let level=0, recorder=null, chunks=[], stream=null, audioCtx=null, sourceNode=null, inputMix=null, filters=[], compressorNode=null, gainNode=null, noiseNode=null, noiseGain=null, currentObjectUrl=null, revealed=false;
 const levelNames=['0 — सामान्य','1 — हल्की हानि','2 — मध्यम हानि','3 — गंभीर हानि'];
 function updateLevel(n){level=Number(n);updateAudioFilters();$('severity').value=level;$('severityLabel').textContent=levelNames[level];$('severityBar').style.width=(level/3*100)+'%';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));$('playProcessed').textContent=level===0?'सामान्य श्रवण में चलाएँ':'चुनी प्रोफ़ाइल में चलाएँ';renderText();if(activeTtsText&&'speechSynthesis'in window&&speechSynthesis.speaking)speakText(activeTtsText);}
 document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>updateLevel(b.dataset.level)));
@@ -80,21 +80,41 @@ $('record').addEventListener('click',async()=>{try{stream=await navigator.mediaD
 $('stopRecord').addEventListener('click',()=>{if(recorder&&recorder.state!=='inactive')recorder.stop()});
 function makeNoise(ctx){const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;const n=ctx.createBufferSource();n.buffer=buffer;n.loop=true;return n;}
 function stopNoise(){if(noiseNode){try{noiseNode.stop()}catch(e){}try{noiseNode.disconnect()}catch(e){}noiseNode=null;}if(noiseGain){try{noiseGain.disconnect()}catch(e){}noiseGain=null;}}
+// Illustrative sloping high-frequency loss: attenuation varies by frequency, not just overall volume.
+const eqFrequencies=[250,500,1000,2000,4000,6000];
+const eqAttenuation=[
+ [0,0,0,0,0,0],
+ [0,0,-1,-3,-8,-12],
+ [0,-1,-3,-8,-18,-26],
+ [-1,-3,-8,-16,-30,-38]
+];
 function updateAudioFilters(){
  if(!audioCtx||!filters.length||!gainNode)return;
  const now=audioCtx.currentTime;
- filters[0].frequency.setTargetAtTime([20,250,500,800][level],now,.02);
- filters[1].frequency.setTargetAtTime([18000,5500,2600,1200][level],now,.02);
- filters[2].frequency.setTargetAtTime([3000,2800,2500,2200][level],now,.02);
- filters[2].gain.setTargetAtTime([0,-5,-10,-16][level],now,.02);
- gainNode.gain.setTargetAtTime([1,.50,.22,.08][level],now,.02);
+ filters.forEach((filter,i)=>{
+  filter.frequency.setTargetAtTime(eqFrequencies[i],now,.04);
+  filter.gain.setTargetAtTime(eqAttenuation[level][i],now,.04);
+ });
+ // Keep the main level relatively similar so the spectral change is easier to hear.
+ gainNode.gain.setTargetAtTime([1,.96,.90,.82][level],now,.05);
+ if(compressorNode){
+  compressorNode.threshold.setTargetAtTime([-30,-34,-38,-42][level],now,.05);
+  compressorNode.ratio.setTargetAtTime([1,1.5,2,2.5][level],now,.05);
+ }
 }
 function updateNoise(){
- if(!audioCtx)return;
+ if(!audioCtx||!inputMix)return;
  const value=Number($('noise').value);
  if(value===0){stopNoise();return;}
- if(!noiseNode){noiseNode=makeNoise(audioCtx);noiseGain=audioCtx.createGain();noiseNode.connect(noiseGain);noiseGain.connect(audioCtx.destination);noiseNode.start();}
- noiseGain.gain.setTargetAtTime(Math.min(.85,Math.pow(value/35,1.35)*.85),audioCtx.currentTime,.02);
+ if(!noiseNode){
+  noiseNode=makeNoise(audioCtx);
+  noiseGain=audioCtx.createGain();
+  noiseNode.connect(noiseGain);
+  // Mix noise before the same hearing-loss filters so speech and noise are processed together.
+  noiseGain.connect(inputMix);
+  noiseNode.start();
+ }
+ noiseGain.gain.setTargetAtTime(Math.min(.55,Math.pow(value/35,1.25)*.55),audioCtx.currentTime,.04);
 }
 async function playProcessed(){
  const el=$('sourceAudio');
@@ -102,22 +122,30 @@ async function playProcessed(){
  try{
   if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
   await audioCtx.resume();
-  // An HTMLMediaElement may only be associated with one MediaElementAudioSourceNode.
-  // Reuse the same node and audio graph for every replay and every recording.
+  // A media element can only be attached to one MediaElementAudioSourceNode; reuse this graph.
   if(!sourceNode){
-   if (!sourceNode) {   sourceNode = audioCtx.createMediaElementSource(el); }
-   const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.Q.value=.7;hp.frequency.value=[20,250,500,800][level];
-   const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.Q.value=[18000,5500,2600,1200][level];
-   const peak=audioCtx.createBiquadFilter();peak.type='peaking';peak.frequency.value=[3000,2800,2500,2200][level];peak.Q.value=1;
+   sourceNode=audioCtx.createMediaElementSource(el);
+   inputMix=audioCtx.createGain();
+   const chain=[];
+   eqFrequencies.forEach((frequency,i)=>{
+    const eq=audioCtx.createBiquadFilter();
+    eq.type='peaking';eq.frequency.value=frequency;eq.Q.value=.72;eq.gain.value=0;
+    chain.push(eq);
+   });
+   compressorNode=audioCtx.createDynamicsCompressor();
+   compressorNode.knee.value=18;compressorNode.attack.value=.006;compressorNode.release.value=.18;
    gainNode=audioCtx.createGain();
-   sourceNode.connect(hp);hp.connect(lp);lp.connect(peak);peak.connect(gainNode);gainNode.connect(audioCtx.destination);
-   filters=[hp,lp,peak];
+   sourceNode.connect(inputMix);
+   let previous=inputMix;
+   chain.forEach(eq=>{previous.connect(eq);previous=eq;});
+   previous.connect(compressorNode);compressorNode.connect(gainNode);gainNode.connect(audioCtx.destination);
+   filters=chain;
   }
   updateAudioFilters();
   el.pause();el.currentTime=0;
   updateNoise();
   await el.play();
-  setAudioStatus('चल रहा है: '+levelNames[level]+'; अनुमानित वॉल्यूम स्तर '+[100,50,22,8][level]+'%; पृष्ठभूमि शोर '+$('noise').value+'%. यह शैक्षिक प्रभाव है, वास्तविक dB HL मॉडल नहीं।');
+  setAudioStatus('चल रहा है: '+levelNames[level]+'; आवृत्ति-आधारित फ़िल्टरिंग सक्रिय; पृष्ठभूमि शोर '+$('noise').value+'%. सामान्य, हल्की, मध्यम और गंभीर प्रोफ़ाइल शैक्षिक अनुमान हैं, वास्तविक ऑडियोग्राम नहीं।');
  }catch(e){stopNoise();console.error('Audio playback error:',e);setAudioStatus('प्लेबैक विफल: '+(e&&e.message?e.message:'ब्राउज़र ऑडियो समस्या')+'। पेज रीफ़्रेश करके पुनः प्रयास करें।');}
 }
 $('playProcessed').addEventListener('click',playProcessed);
