@@ -81,11 +81,11 @@ function stopNoise(){if(noiseNode){try{noiseNode.stop()}catch(e){}try{noiseNode.
 function updateAudioFilters(){
  if(!audioCtx||!filters.length||!gainNode)return;
  const now=audioCtx.currentTime;
- filters[0].frequency.setTargetAtTime([20,180,400,750][level],now,.02);
- filters[1].frequency.setTargetAtTime([18000,6500,3400,1900][level],now,.02);
+ filters[0].frequency.setTargetAtTime([20,250,500,800][level],now,.02);
+ filters[1].frequency.setTargetAtTime([18000,5500,2600,1200][level],now,.02);
  filters[2].frequency.setTargetAtTime([3000,2800,2500,2200][level],now,.02);
  filters[2].gain.setTargetAtTime([0,-5,-10,-16][level],now,.02);
- gainNode.gain.setTargetAtTime([1,.9,.78,.62][level],now,.02);
+ gainNode.gain.setTargetAtTime([1,.50,.22,.08][level],now,.02);
 }
 function updateNoise(){
  if(!audioCtx)return;
@@ -104,8 +104,8 @@ async function playProcessed(){
   // Reuse the same node and audio graph for every replay and every recording.
   if(!sourceNode){
    if (!sourceNode) {   sourceNode = audioCtx.createMediaElementSource(el); }
-   const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.Q.value=.7;
-   const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.Q.value=.7;
+   const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.Q.value=.7;hp.frequency.value=[20,250,500,800][level];
+   const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.Q.value=[18000,5500,2600,1200][level];
    const peak=audioCtx.createBiquadFilter();peak.type='peaking';peak.frequency.value=[3000,2800,2500,2200][level];peak.Q.value=1;
    gainNode=audioCtx.createGain();
    sourceNode.connect(hp);hp.connect(lp);lp.connect(peak);peak.connect(gainNode);gainNode.connect(audioCtx.destination);
@@ -115,7 +115,7 @@ async function playProcessed(){
   el.pause();el.currentTime=0;
   updateNoise();
   await el.play();
-  setAudioStatus('चल रहा है: '+levelNames[level]+'; पृष्ठभूमि शोर '+$('noise').value+'%. प्रोफ़ाइल में अब अधिक स्पष्ट आवृत्ति-सीमाएँ लागू हैं।');
+  setAudioStatus('चल रहा है: '+levelNames[level]+'; अनुमानित वॉल्यूम स्तर '+[100,50,22,8][level]+'%; पृष्ठभूमि शोर '+$('noise').value+'%. यह शैक्षिक प्रभाव है, वास्तविक dB HL मॉडल नहीं।');
  }catch(e){stopNoise();console.error('Audio playback error:',e);setAudioStatus('प्लेबैक विफल: '+(e&&e.message?e.message:'ब्राउज़र ऑडियो समस्या')+'। पेज रीफ़्रेश करके पुनः प्रयास करें।');}
 }
 $('playProcessed').addEventListener('click',playProcessed);
