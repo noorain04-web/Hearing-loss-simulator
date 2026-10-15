@@ -102,7 +102,7 @@ async function playProcessed(){
   // An HTMLMediaElement may only be associated with one MediaElementAudioSourceNode.
   // Reuse the same node and audio graph for every replay and every recording.
   if(!sourceNode){
-   sourceNode=audioCtx.createMediaElementSource(el);
+   if (!sourceNode) {   sourceNode = audioCtx.createMediaElementSource(el); }
    const hp=audioCtx.createBiquadFilter();hp.type='highpass';hp.Q.value=.7;
    const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.Q.value=.7;
    const peak=audioCtx.createBiquadFilter();peak.type='peaking';peak.frequency.value=3000;peak.Q.value=1;
